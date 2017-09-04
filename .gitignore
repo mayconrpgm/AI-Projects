@@ -1,1 +1,7 @@
 .DS_Store
+.ptc
+*.pyc
+*.pth
+*.mp4
+*.meta.json
+__MACOSX

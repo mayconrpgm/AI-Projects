@@ -79,21 +79,65 @@ class CNN(nn.Module):
 
 # Making the body
 
+class SoftmaxBody(nn.Module):
+    
+    def __init__(self, temperature):
+        super(SoftmaxBody, self).__init__()
+        self.temperature = temperature
+        
+    #this method will receive the outputs from the neural network and decide which action will be playerd
+    def forward(self, outputs):
+        #aplying the softmax function to create the probabilities for each action
+        #the temperature will balance the exploration rate of the AI, the higher the temperature, less exploration
+        #softmax function: https://en.wikipedia.org/wiki/Softmax_function
+        probabilities = F.softmax(outputs * self.temperature)
+        actions = probabilities.multinomial();
+        return actions
 
 
 # Making the AI
 
+class AI:
+    def __init__(self, brain, body):
+        #this is an instance of the CNN class
+        self.brain = brain
+        #this is an instance of the SoftmaxBody class
+        self.body = body
 
-
-
+    def __call__(self, inputs):
+        #inputs are the images from the game
+        #transforming the image into an numpy array of floats and then converting the numpy array into a torch tensor and then into a Variable
+        input = Variable(torch.from_numpy(np.array(inputs, dtype = np.float32)))
+        
+        #passing the input to the "eyes" of the AI
+        output = self.brain(input)
+        #getting the action to play
+        actions = self.body(output)
+        
+        #converting the torch tensor into a numpy array
+        return actions.data.numpy()
 
 # Part 2 - Training the AI with Deep Convolutional Q-Learning
 
 # Getting the Doom environment
 
+#getting the input images gym.make("ppaquette/DoomCorridor-v0") imports the ai-gym environment (https://gym.openai.com/docs/)
+#the PreprocessImage class in this case is converting the image into a 80x80 square in grayscale
+doom_env = image_preprocessing.PreprocessImage(
+                                    SkipWrapper(4)(ToDiscrete("minimal")(gym.make("ppaquette/DoomCorridor-v0"))), 
+                                    width = 80, 
+                                    height = 80, 
+                                    grayscale = True)
+
+#this command allow the environment to generate the videos with the results of the training
+doom_env = gym.wrappers.Monitor(doom_env, "videos", force = True)
+
+number_actions = doom_env.action_space.n
 
 # Building an AI
-
+cnn = CNN(number_actions)
+softmax_body = SoftmaxBody(temperature = 1.0)
+ai = AI(cnn, softmax_body)
 
 # Setting up Experience Replay
 
